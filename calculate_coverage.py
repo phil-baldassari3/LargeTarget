@@ -77,15 +77,23 @@ def find_coverage4each_tissue(df, tissue_ls, tissue_dict):
     percent_cov_col = []
     num_genes_col = []
 
+    #first row of resulting dataframe is the total
+    tissue_col.append("Total")
+    total_len_col.append(total_cov)
+    percent_cov_col.append(100)
+    num_genes_col.append(len(df))
+
+
     #looping through tissues
     for tissue in tissue_ls:
         tissue_col.append(tissue)
-
+        print(tissue)
         #fitering, if main function is using a sub tissue list, tissue_dict will be set to None
         if tissue_dict == None:
-            filtered_df = df[df['Tissue'].str.contains(tissue)]
+            filtered_df = df[df['Tissue'].str.contains(tissue, regex=False)]
         else:
-            filtered_df = df[df['Tissue'].str.contains("|".join(tissue_dict[tissue]))]
+            filtered_df = df[df['Tissue'].str.contains("|".join(tissue_dict[tissue]), regex=True)]
+            print(filtered_df)
 
         #how many genes
         num_genes_col.append(len(filtered_df))
@@ -99,11 +107,11 @@ def find_coverage4each_tissue(df, tissue_ls, tissue_dict):
         percent_cov_col.append(pc)
 
     #normalizing percent
-    pc_total = sum(percent_cov_col)
-    norm_pc_col = [((i/pc_total)*100) for i in percent_cov_col]
+    """ pc_total = sum(percent_cov_col)
+    norm_pc_col = [((i/pc_total)*100) for i in percent_cov_col] """
 
     #making dfs
-    dictionary = {"Tissue": tissue_col, "Total_length": total_len_col, "Percent_coverage": percent_cov_col, "Norm_percent": norm_pc_col, "Num_genes": num_genes_col}
+    dictionary = {"Tissue": tissue_col, "Total_length": total_len_col, "Percent_coverage": percent_cov_col, "Num_genes": num_genes_col}
     final_df = pd.DataFrame(dictionary)
 
     return final_df
@@ -113,14 +121,22 @@ def find_coverage4each_tissue(df, tissue_ls, tissue_dict):
 
 
     
-def main_func(data_csv, tissue_csv, database, sub=True):
+def main_func(data_csv, tissue_csv, database, sub=True, biotype="all"):
     """
     Main function to calculate tissue coverage and gene counts. Outputs a csv.
     Set sub to false to not output a subtissue csv. (For combined GTEX and Tissue Atlas data)
+    biotype defaults to "all" but can be set to "protein_coding" or "ncRNA"
     """
 
     #opening df
     data_df = pd.read_csv(data_csv)
+
+    #filtering biotype (GTEX has some ncRNA which you might not want to include)
+    if biotype == "protein_coding":
+        data_df = data_df[data_df['BioType'] == "protein_coding"]
+    elif biotype == "ncRNA":
+        data_df = data_df[data_df['BioType'] != "protein_coding"]
+
 
     #generating tissue dictionary
     tissue_dict, broad_dict = tissue_categories(tissue_csv, database)
@@ -137,9 +153,16 @@ def main_func(data_csv, tissue_csv, database, sub=True):
 
 
     #saving files
-    sub_filename = "subtissue_cov_" + data_csv
-    tissue_filename = "tissue_cov_" + data_csv
-    broad_filename = "broad_cov_"+ data_csv
+    if biotype != "all":
+        biostr = biotype + "_"
+    else:
+        biostr = ""
+
+    sub_filename = "subtissue_cov_{}".format(biostr) + data_csv
+    tissue_filename = "tissue_cov_{}".format(biostr) + data_csv
+    broad_filename = "broad_cov_{}".format(biostr) + data_csv
+
+
 
     if sub == True:
         sub_df.to_csv(sub_filename, index=False)
@@ -152,27 +175,32 @@ def main_func(data_csv, tissue_csv, database, sub=True):
 
 
 #running
-main_func("_0.99threshold_genome.csv", "All_categories.csv", "All", sub=False)
-main_func("_0.95threshold_genome.csv", "All_categories.csv", "All", sub=False)
-main_func("_0.75threshold_genome.csv", "All_categories.csv", "All", sub=False)
-
-main_func("GTEX_0.99threshold_genome.csv", "GTEX_categories.csv", "GTEX")
-main_func("GTEX_0.95threshold_genome.csv", "GTEX_categories.csv", "GTEX")
-main_func("GTEX_0.75threshold_genome.csv", "GTEX_categories.csv", "GTEX")
-
-main_func("GTEX_0.99threshold_exome.csv", "GTEX_categories.csv", "GTEX")
-main_func("GTEX_0.95threshold_exome.csv", "GTEX_categories.csv", "GTEX")
-main_func("GTEX_0.75threshold_exome.csv", "GTEX_categories.csv", "GTEX")
-
-main_func("Atlas_ncRNAs_0.99threshold_genome.csv", "Tissue_Atlas_categories.csv", "Tissue_Atlas")
-main_func("Atlas_ncRNAs_0.95threshold_genome.csv", "Tissue_Atlas_categories.csv", "Tissue_Atlas")
-main_func("Atlas_ncRNAs_0.75threshold_genome.csv", "Tissue_Atlas_categories.csv", "Tissue_Atlas")
+main_func("_1_threshold_genome.csv", "tissue_categories/all_tissues.csv", "All", sub=False)
+main_func("_5_threshold_genome.csv", "tissue_categories/all_tissues.csv", "All", sub=False)
+main_func("_75.0th_threshold_genome.csv", "tissue_categories/all_tissues.csv", "All", sub=False)
+main_func("_90.0th_threshold_genome.csv", "tissue_categories/all_tissues.csv", "All", sub=False)
+main_func("_99.0th_threshold_genome.csv", "tissue_categories/all_tissues.csv", "All", sub=False)
 
 
 
+main_func("GTEX_genes_1_threshold_genome.csv", "tissue_categories/GTEX_categories.csv", "GTEX", biotype="protein_coding")
+main_func("GTEX_genes_5_threshold_genome.csv", "tissue_categories/GTEX_categories.csv", "GTEX",  biotype="protein_coding")
+main_func("GTEX_genes_75.0th_threshold_genome.csv", "tissue_categories/GTEX_categories.csv", "GTEX",  biotype="protein_coding")
+main_func("GTEX_genes_90.0th_threshold_genome.csv", "tissue_categories/GTEX_categories.csv", "GTEX",  biotype="protein_coding")
+main_func("GTEX_genes_99.0th_threshold_genome.csv", "tissue_categories/GTEX_categories.csv", "GTEX",  biotype="protein_coding")
 
 
 
+main_func("_1_threshold_genome.csv", "tissue_categories/all_tissues.csv", "All", sub=False, biotype="ncRNA")
+main_func("_5_threshold_genome.csv", "tissue_categories/all_tissues.csv", "All", sub=False,  biotype="ncRNA")
+main_func("_75.0th_threshold_genome.csv", "tissue_categories/all_tissues.csv", "All", sub=False,  biotype="ncRNA")
+main_func("_90.0th_threshold_genome.csv", "tissue_categories/all_tissues.csv", "All", sub=False,  biotype="ncRNA")
+main_func("_99.0th_threshold_genome.csv", "tissue_categories/all_tissues.csv", "All", sub=False,  biotype="ncRNA")
 
 
 
+main_func("Atlas_ncRNAs_1_threshold_genome.csv", "tissue_categories/Tissue_Atlas_categories.csv", "Tissue_Atlas")
+main_func("Atlas_ncRNAs_5_threshold_genome.csv", "tissue_categories/Tissue_Atlas_categories.csv", "Tissue_Atlas")
+main_func("Atlas_ncRNAs_75.0th_threshold_genome.csv", "tissue_categories/Tissue_Atlas_categories.csv", "Tissue_Atlas")
+main_func("Atlas_ncRNAs_90.0th_threshold_genome.csv", "tissue_categories/Tissue_Atlas_categories.csv", "Tissue_Atlas")
+main_func("Atlas_ncRNAs_99.0th_threshold_genome.csv", "tissue_categories/Tissue_Atlas_categories.csv", "Tissue_Atlas")

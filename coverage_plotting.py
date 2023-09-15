@@ -73,6 +73,11 @@ def plot_covbar_genebar_pie(csvfile):
     plt.clf()
 
 
+def plot_cov(csvfile):
+    """
+    """
+    print('')
+
 
 #plotting for each tissue coverage csv
 directory = "/Users/philipbaldassari/Desktop/neuro/output/processed_output/Coverage"
