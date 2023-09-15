@@ -25,7 +25,11 @@ def merge_express_cov(pattern):
     concatenated_df = pd.concat(df_ls, ignore_index=True)
 
     #merging and grouping tissues
+    print("length of df before grouping:", len(concatenated_df))
     final_df = concatenated_df.groupby(['Gene', 'Transcript', 'Start', 'Stop', 'Length', 'BioType'], group_keys=False)['Tissue'].apply('; '.join).reset_index()
+    print("length of df after grouping:", len(final_df))
+    print("are they the same?")
+    print("\n#######################################################\n")
 
     #save file
     #filename = "processed_output/" + pattern.replace("*", "_")
@@ -40,16 +44,9 @@ def merge_express_cov(pattern):
 
 
 
-merge_express_cov('GTEX*0.75threshold_genome.csv')
-merge_express_cov('GTEX*0.95threshold_genome.csv')
-merge_express_cov('GTEX*0.99threshold_genome.csv')
-
-merge_express_cov('GTEX*0.75threshold_exome.csv')
-merge_express_cov('GTEX*0.95threshold_exome.csv')
-merge_express_cov('GTEX*0.99threshold_exome.csv')
-
-#merge_express_cov('*0.75threshold_genome.csv')
-merge_express_cov('*0.95threshold_genome.csv')
-merge_express_cov('*0.99threshold_genome.csv')
-
+merge_express_cov('*1_threshold_genome.csv')
+merge_express_cov('*5_threshold_genome.csv')
+merge_express_cov('*75.0th_threshold_genome.csv')
+merge_express_cov('*90.0th_threshold_genome.csv')
+merge_express_cov('*99.0th_threshold_genome.csv')
 
