@@ -1,18 +1,29 @@
 """
-Wright-Fisher process on two differently sized genes. One gene has a longer CDS and more TFBS than the other.
+fitness4gene_size version 1.2
+
+Author: Phil Baldassari
+
+Description: Wright-Fisher process on two differently sized genes. One gene has a longer CDS and more TFBS than the other.
 In this simplistic model, a gene is expressed when each TFBS is bound by a TF at least once during a specified time period in ms.
 A longer CDS has more chance for Non-synonymous mutation.
 
 Model:
 Each gene has a certain number of TFBS each with a probability score of it being bound by a TF at least once during a specified time period in ms.
 The Cis-regulatory model score cooresponds to the probability that each TFBS was bound at least once during the specified time period.
-The CDS recieves an initial score of one which indicates a normal gene product.
+The CDS recieves an initial score of 1 meaning a normal gene product.
+A score of 1 indicates a normal gene product with lower scores being less expressed and higher scores being more expressed.
 Each generation mutations are added based on a per site mutation rate. the number of mutations are sampled from a binomial distribution.
-Mutations in TFBS affect the TFBS score propotianally. Multiplpiers are smalled from a normal distribution with a mean of -0.01 which indicates that on average mutation decrease the expression by 1%.
-Mutations on CDS only affect functional if they are nonsynonymous which occurs with around 73% of all mutations in CDS. These muations also affect function propotianlly as in TFBS
+Mutations in TFBS affect the TFBS score propotianally. Multiplpiers are smalled from a normal distribution with a mean of -0.01 which indicates 
+that on average mutation decreases the expression contribution of that TFBS by 1%.
+Mutations on CDS only affect function if they are nonsynonymous which occurs with around 73% of all mutations in CDS. These muations also affect function propotianlly.
+Mutational effect proportions are sampled from a gamma distribution of shape 3 and rate 8.4 (scale 0.11905) so that the expected (average) effect of a NS mutation decreases the gene expression
+by ~64% and mutations will be at least nearly neutral ~2% of the time and at least truly neutral ~1% of the time.
+Effect propotional of multiple NS mutations are mutliplied together before being multiplied to the original expression level score.
 The gene score is computed by multiplying Cis-regulatory model score and the CDS score. Since species is diploid, the scores of both homologs are averaged for an individual score.
 These scores are analogous to a relative expression level. The scores are input into one of 3 fitness functions for selection at each genreation: i) linear, ii) parabolic, iii) sigmoidal.
 The population of individuals are diploid and obligate outbreeding hermaphrodites. The genreation size remains constant.
+
+usage: Use through the command line. See README.md for details.
 """
 
 #importing modules
@@ -247,17 +258,22 @@ def starting_pop(tfbs, tfbs_len, CDS_len):
         for j in range(2):
             gene = []
 
-            #scores for TFBS binding probabilites
-            tfbs_probs = list(np.random.exponential(0.1, size=tfbs))
+            #scores for TFBS binding probabilites (Lahdesmaki et al. 2008)??
+            #tfbs_probs = list(np.random.exponential(0.1, size=tfbs))
             #getting rid of initial probabilities at zero
-            tfbs_probs = [p if p > 0 else 0.0001 for p in tfbs_probs]
+            #tfbs_probs = [p if p > 0 else 0.0001 for p in tfbs_probs]
 
+            tfbs_probs = [0.1 for i in range(tfbs)]
+
+
+            """
             #however, empirical data shows a second mode at 1 with frequency of 0.01 (Lahdesmaki et al. 2008)
             numof1s = np.random.binomial(tfbs, 0.01)
             where1s = random.choices([idx for idx in range(tfbs)], k=numof1s)
 
             for idx in where1s:
                 tfbs_probs[idx] = 1
+            """
 
 
             #CDS score and length
@@ -332,19 +348,24 @@ def next_gen(pop_ls, ws, selection="selection"):
                 howmanyTFBS = np.random.binomial(gene[0][1][idx], mu)
 
                 #changing scores proportinally: s' = s(1+x)
-                pc_diff = 0
+                #pc_diff = 0
+                pc_prop = 1
                 for j in range(howmanyTFBS):
-                    pc_diff += np.random.normal(-0.01, 0.02)
+                    #pc_diff += np.random.normal(-0.01, 0.02)
+                    pc_prop += np.random.gamma(3, 0.133333)
                 
                 if howmanyTFBS == 0:
                     continue
                 else:
                     #new score making sure to keep within the bounds [0,inf)
-                    newscore = gene[0][0][idx] * (1 + pc_diff)
+                    #newscore = gene[0][0][idx] * (1 + pc_diff)
+                    newscore = gene[0][0][idx] * pc_prop
+                    """
                     if newscore < 0:
                         newscore = 0
                     else:
                         newscore = newscore
+                    """
 
                     #setting new score
                     gene[0][0][idx] = newscore
@@ -362,19 +383,16 @@ def next_gen(pop_ls, ws, selection="selection"):
                     SNP_eff.append("SS")
 
             #changing scores proportinally: s' = s(1+x)
-            cds_pc_diff = 0
+            cds_pc_prop = 1
             for j in range(SNP_eff.count("NS")):
-                cds_pc_diff += np.random.normal(-0.01, 0.02)
+                #cds_pc_prop *= np.random.gamma(3, 0.11905)
+                cds_pc_prop *= np.random.gamma(2, 0.15)
             
             if howmanyCDS == 0:
                 continue
             else:
-                #new score making sure to keep within the bounds [0,inf)
-                cds_score = gene[1][0] * (1 + cds_pc_diff)
-                if cds_score < 0:
-                    cds_score = 0
-                else:
-                    cds_score = cds_score
+                #new score
+                cds_score = gene[1][0] * cds_pc_prop
 
             gene[1][0] = cds_score
 
@@ -403,7 +421,6 @@ def sim_generations(population0, scores0, fitnesses0):
     """
 
     #starting population
-    #population0, sc0, w0 = starting_pop()
     ppln = population0
     w = fitnesses0
 
@@ -415,12 +432,20 @@ def sim_generations(population0, scores0, fitnesses0):
     avg_w = []
     max_w = []
     var_w = []
+    max_Dw = [0]
+    avg_Dw = [0]
+    var_Dw = [0]
     max_s.append(max(scores0))
     avg_s.append(mean(scores0))
     var_s.append(variance(scores0))
     avg_w.append(mean(fitnesses0))
     max_w.append(max(fitnesses0))
     var_w.append(variance(fitnesses0))
+
+
+
+    #holding list for relative fitnesses for computing fitness deltas between generations
+    w_previous = fitnesses0
 
     #running for generations 1-g
     for gen in range(g):
@@ -434,39 +459,62 @@ def sim_generations(population0, scores0, fitnesses0):
         var_w.append(variance(w))
         generation.append(gen+1)
 
+        #computing fitness deltas
+        Dw = np.array(w) - np.array(w_previous)
+        max_Dw.append(Dw.max())
+        avg_Dw.append(Dw.mean())
+        var_Dw.append(Dw.var())
+
+        #setting previous generation fitnesses
+        w_previous = w
+
+
+
+
     #plotting
-    fig, axs = plt.subplots(4, 1, figsize=(10, 10))
+    fig, axs = plt.subplots(6, 1, figsize=(10, 15))
 
     axs[0].plot(generation, max_s)
-    #axs[0].set_ylim(bottom=0)
     axs[0].set_title("Maximum Expression Score per Generation")
     axs[0].set_xlabel("Generation")
     axs[0].set_ylabel("Max Expression Score")
 
     axs[1].plot(generation, avg_s)
-    #axs[1].set_ylim(bottom=0)
     axs[1].set_title("Average Expression Score per Generation")
     axs[1].set_xlabel("Generation")
     axs[1].set_ylabel("Avg Expression Score")
 
     axs[2].plot(generation, max_w)
-    #axs[2].set_ylim(bottom=0)
     axs[2].set_title("Maximum Fitness per Generation")
     axs[2].set_xlabel("Generation")
     axs[2].set_ylabel("Max Relative Fitness")
 
     axs[3].plot(generation, avg_w)
-    #axs[3].set_ylim(bottom=0)
     axs[3].set_title("Average Fitness per Generation")
     axs[3].set_xlabel("Generation")
     axs[3].set_ylabel("Avg Relative Fitness")
+
+    axs[4].plot(generation, max_Dw)
+    axs[4].set_title("Maximum Delta Fitness per Generation")
+    axs[4].set_xlabel("Generation")
+    axs[4].set_ylabel("Max Delta Fitness")
+
+    axs[5].plot(generation, avg_Dw)
+    axs[5].set_title("Average Delta Fitness per Generation")
+    axs[5].set_xlabel("Generation")
+    axs[5].set_ylabel("Avg Delta Fitness")
 
     fig.subplots_adjust(hspace=0.5)
 
     plt.savefig('WF_plot_gene{}.png'.format(genenumber))
 
     #saving csv
-    dictionary = {"generation":generation, "max_expression_score": max_s, "avg_expression_score": avg_s, "variance_expression_score":var_s, "max_fitness": max_w, "avg_fitness": avg_w, "variance_fitness":var_w}
+    dictionary = {
+        "generation":generation, 
+        "max_expression_score": max_s, "avg_expression_score": avg_s, "variance_expression_score":var_s, 
+        "max_fitness": max_w, "avg_fitness": avg_w, "variance_fitness":var_w, 
+        "max_DELTAfitness": max_Dw, "avg_DELTAfitness": avg_Dw, "variance_DELTAfitness":var_Dw
+        }
     df = pd.DataFrame(dictionary)
     df.to_csv("WF_data_gene{}.csv".format(genenumber), index=False)
 
