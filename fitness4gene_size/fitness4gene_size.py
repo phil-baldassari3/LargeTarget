@@ -1,5 +1,5 @@
 """
-fitness4gene_size version 1.3
+fitness4gene_size version 1.4
 
 Author: Phil Baldassari
 
@@ -447,6 +447,9 @@ def sim_generations(population0, scores0, fitnesses0):
     #holding list for relative fitnesses for computing fitness deltas between generations
     w_previous = fitnesses0
 
+    #setting generation breaks for progress printing purposes
+    breaks = g // 10
+
     #running for generations 1-g
     for gen in range(g):
         ppln, sc, w = next_gen(ppln, w)
@@ -468,6 +471,15 @@ def sim_generations(population0, scores0, fitnesses0):
         #setting previous generation fitnesses
         w_previous = w
 
+        #printing progress
+        if gen % breaks == 0:
+            print("Generation {}".format(str(gen)))
+
+    #computing standard deviations from variances for plotting
+    sd_s = np.sqrt(var_s)
+    sd_w = np.sqrt(var_w)
+    sd_Dw = np.sqrt(var_Dw)
+
     #plotting
     fig, axs = plt.subplots(6, 1, figsize=(10, 15))
 
@@ -477,6 +489,7 @@ def sim_generations(population0, scores0, fitnesses0):
     axs[0].set_ylabel("Max Expression Score")
 
     axs[1].plot(generation, avg_s)
+    axs[1].fill_between(generation, (avg_s - sd_s), (avg_s + sd_s), color='gray', alpha=0.3)
     axs[1].set_title("Average Expression Score per Generation")
     axs[1].set_xlabel("Generation")
     axs[1].set_ylabel("Avg Expression Score")
@@ -488,6 +501,7 @@ def sim_generations(population0, scores0, fitnesses0):
     axs[2].set_ylabel("Max Relative Fitness")
 
     axs[3].plot(generation, avg_w)
+    axs[3].fill_between(generation, (avg_w - sd_w), (avg_w + sd_w), color='gray', alpha=0.3)
     axs[3].set_title("Average Fitness per Generation")
     axs[3].set_xlabel("Generation")
     axs[3].set_ylabel("Avg Relative Fitness")
@@ -498,6 +512,7 @@ def sim_generations(population0, scores0, fitnesses0):
     axs[4].set_ylabel("Max Delta Fitness")
 
     axs[5].plot(generation, avg_Dw)
+    axs[5].fill_between(generation, (avg_Dw - sd_Dw), (avg_Dw + sd_Dw), color='gray', alpha=0.3)
     axs[5].set_title("Average Delta Fitness per Generation")
     axs[5].set_xlabel("Generation")
     axs[5].set_ylabel("Avg Delta Fitness")
