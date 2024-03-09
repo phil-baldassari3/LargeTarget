@@ -1,5 +1,5 @@
 """
-fitness4gene_size version 1.4
+fitness4gene_size version 1.5
 
 Author: Phil Baldassari
 
@@ -434,18 +434,13 @@ def sim_generations(population0, scores0, fitnesses0):
     avg_w = []
     max_w = []
     var_w = []
-    max_Dw = [0]
     avg_Dw = [0]
-    var_Dw = [0]
     max_s.append(max(scores0))
     avg_s.append(mean(scores0))
     var_s.append(variance(scores0))
     avg_w.append(mean(fitnesses0))
     max_w.append(max(fitnesses0))
     var_w.append(variance(fitnesses0))
-
-    #holding list for relative fitnesses for computing fitness deltas between generations
-    w_previous = fitnesses0
 
     #setting generation breaks for progress printing purposes
     breaks = g // 10
@@ -462,26 +457,19 @@ def sim_generations(population0, scores0, fitnesses0):
         var_w.append(variance(w))
         generation.append(gen+1)
 
-        #computing fitness deltas
-        Dw = np.array(w) - np.array(w_previous)
-        max_Dw.append(Dw.max())
-        avg_Dw.append(Dw.mean())
-        var_Dw.append(Dw.var())
-
-        #setting previous generation fitnesses
-        w_previous = w
-
         #printing progress
         if gen % breaks == 0:
             print("Generation {}".format(str(gen)))
 
+    #computing average delta fitness
+    avg_Dw += list(np.diff(np.array(avg_w)))
+
     #computing standard deviations from variances for plotting
     sd_s = np.sqrt(var_s)
     sd_w = np.sqrt(var_w)
-    sd_Dw = np.sqrt(var_Dw)
 
     #plotting
-    fig, axs = plt.subplots(6, 1, figsize=(10, 15))
+    fig, axs = plt.subplots(5, 1, figsize=(10, 15))
 
     axs[0].plot(generation, max_s)
     axs[0].set_title("Maximum Expression Score per Generation")
@@ -506,16 +494,10 @@ def sim_generations(population0, scores0, fitnesses0):
     axs[3].set_xlabel("Generation")
     axs[3].set_ylabel("Avg Relative Fitness")
 
-    axs[4].plot(generation, max_Dw)
-    axs[4].set_title("Maximum Delta Fitness per Generation")
+    axs[4].plot(generation, avg_Dw)
+    axs[4].set_title("Average Delta Fitness per Generation")
     axs[4].set_xlabel("Generation")
-    axs[4].set_ylabel("Max Delta Fitness")
-
-    axs[5].plot(generation, avg_Dw)
-    axs[5].fill_between(generation, (avg_Dw - sd_Dw), (avg_Dw + sd_Dw), color='gray', alpha=0.3)
-    axs[5].set_title("Average Delta Fitness per Generation")
-    axs[5].set_xlabel("Generation")
-    axs[5].set_ylabel("Avg Delta Fitness")
+    axs[4].set_ylabel("Avg Delta Fitness")
 
     fig.subplots_adjust(hspace=0.5)
 
@@ -525,8 +507,7 @@ def sim_generations(population0, scores0, fitnesses0):
     dictionary = {
         "generation":generation, 
         "max_expression_score": max_s, "avg_expression_score": avg_s, "variance_expression_score":var_s, 
-        "max_fitness": max_w, "avg_fitness": avg_w, "variance_fitness":var_w, 
-        "max_DELTAfitness": max_Dw, "avg_DELTAfitness": avg_Dw, "variance_DELTAfitness":var_Dw
+        "max_fitness": max_w, "avg_fitness": avg_w, "variance_fitness":var_w, "avg_DELTAfitness": avg_Dw
         }
     df = pd.DataFrame(dictionary)
     df.to_csv("WF_data_gene{}.csv".format(genenumber), index=False)
