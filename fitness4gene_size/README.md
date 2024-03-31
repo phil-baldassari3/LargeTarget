@@ -29,6 +29,7 @@ The script also accepts the following optional arguments, which have default val
 - `--burnin`: An integer specifying the number of burn-in generations. The default value is 50. Example: `--burnin 100`.
 - `--mueffects`: A string specifying the effect of mutations to be used as a control. The default is "all", change to "deleterious" for all mutations to be deleterious. Example: `--mueffects deleterious`
 - `--mutypes`: A string specifying if mutations land in TFBSs, CDS, or both to be used as a control. The default is "all", The other options are "CDS" or "CRM". Example: `--mutypes CRM`
+- `--outputdir`: A string specifying the path to the directory in which to save the output files, note: the directory sting must end in "/" and it can be a relative path if the output directory is a subdirectory to the one in which this script is saved.. Example: `--outputdir path/to/save/output/`
 
 
 

@@ -1,5 +1,5 @@
 """
-fitness4gene_size version 1.5
+fitness4gene_size version 1.6
 
 Author: Phil Baldassari
 
@@ -12,11 +12,11 @@ Each gene has a certain number of TFBS each with a probability score of it being
 The Cis-regulatory model score cooresponds to the probability that at least one TFBS was bound at a given moment.
 The CDS recieves an initial score of 1 meaning a normal gene product.
 A score of 1 indicates a normal gene product with lower scores being less functional and higher scores being more functional.
-Each generation mutations are added based on a per site mutation rate. The number of mutations are sampled from a binomial distribution.
+Each generation mutations are added based on a per site mutation rate. The number of mutations is sampled from a binomial distribution.
 Mutations in TFBS affect the TFBS score propotianally. Multiplpiers are sampled from a gamma distribution such that a mutation increases the 
 binding probability 10% of the time and on average the binding affinity decreases to ~60% of the original affinity.
 Mutations on CDS only affect function if they are nonsynonymous which occurs with around 73% of all mutations in CDS. These muations also affect function propotianlly.
-Mutational effect proportions are sampled from a gamma distribution such that the expected effect of a NS mutation decreases the gene expression
+Mutational effect proportions are sampled from a gamma distribution such that the expected effect of a NS mutation decreases the gene function
 by ~65% and mutations will be at least neutral ~1% of the time.
 The Cis-regulatory model scores are analogous to a relative expression level. These scores are input into one of 3 fitness functions for selection at each genreation: i) linear, ii) parabolic, iii) sigmoidal
 to compute the CRM's fitness contribution score. The gene score is computed by multiplying the CRM fitness score and the CDS score.
@@ -57,6 +57,7 @@ parser.add_argument('--tfbslen2', type=int, required=True, help='average length 
 parser.add_argument('--cds2', type=int, required=True, help='length of CDS for gene 2 note: this number does NOT have to be divisible by 3')
 parser.add_argument('--mueffects', type=str, default="all", help='control parameter to control the effect of mutations, default is "all", change to "deleterious" for all mutations to be deleterious')
 parser.add_argument('--mutypes', type=str, default="all", help='control parameter to control if mutations land in TFBSs, CDS, or both, default is "all", change to "CDS" for all mutations to only be in CDS or "CRM" for mutations to only be in TFBSs')
+parser.add_argument('--outputdir', type=str, default="", help='path to the directory in which to save the output files, note: the directory sting must end in "/" and it can be a relative path if the output directory is a subdirectory to the one in which this script is saved.')
 
 #parse args
 args = parser.parse_args()
@@ -76,6 +77,7 @@ tfbs_len2 = args.tfbslen2
 CDS_len2 = args.cds2
 mutation_effects = args.mueffects
 mutations_types = args.mutypes
+out_dir = args.outputdir
 
 
 
@@ -110,7 +112,7 @@ def parabolic(x):
 
 
 def sigmoidal(x):
-    """f(x) = 1/(1 + e^-4(2x - a))"""
+    """f(x) = 1/(1 + e^-8(2x - a))"""
 
     y = 1 / (1 +(math.e ** (-8*(2*x - a))))
 
@@ -501,7 +503,7 @@ def sim_generations(population0, scores0, fitnesses0):
 
     fig.subplots_adjust(hspace=0.5)
 
-    plt.savefig('WF_plot_gene{}.png'.format(genenumber))
+    plt.savefig('{out}WF_plot_gene{gno}.png'.format(out=out_dir, gno=genenumber))
 
     #saving csv
     dictionary = {
@@ -510,7 +512,7 @@ def sim_generations(population0, scores0, fitnesses0):
         "max_fitness": max_w, "avg_fitness": avg_w, "variance_fitness":var_w, "avg_DELTAfitness": avg_Dw
         }
     df = pd.DataFrame(dictionary)
-    df.to_csv("WF_data_gene{}.csv".format(genenumber), index=False)
+    df.to_csv("{out}WF_data_gene{gno}.csv".format(out=out_dir, gno=genenumber), index=False)
 
 
 def run_simulator(num_of_tfbs, length_of_tfbs, length_of_cds):
