@@ -38,9 +38,6 @@ import matplotlib.pyplot as plt
 import argparse
 from datetime import datetime
 
-#opening log file
-logfile = open("logfile.txt", "a")
-
 #parsing command line arguments
 parser = argparse.ArgumentParser()
 
@@ -84,6 +81,9 @@ mutation_effects = args.mueffects
 mutations_types = args.mutypes
 out_dir = args.outputdir
 
+
+#opening log file
+logfile = open(out_dir+"logfile.txt", "a")
 
 
 #setting mutational effects sampling interval
