@@ -1,5 +1,5 @@
 """
-fitness4gene_size version 1.6
+fitness4gene_size version 1.7
 
 Author: Phil Baldassari
 
@@ -36,8 +36,10 @@ from statistics import mean
 from statistics import variance
 import matplotlib.pyplot as plt
 import argparse
+from datetime import datetime
 
-
+#opening log file
+logfile = open("logfile.txt", "a")
 
 #parsing command line arguments
 parser = argparse.ArgumentParser()
@@ -49,12 +51,15 @@ parser.add_argument('--gen', type=int, default=100, help='number of genreations 
 parser.add_argument('--express2fit', type=str, required=True, help='function repressenting relationship b/n expression and fitness, options are: "linear", "parabolic", or "sigmoidal"')
 parser.add_argument('--burnin', type=int, default=50, help='number of burnin generations, default is 100')
 parser.add_argument('--seed', type=int, required=True, help='seed value for randomization modules')
-parser.add_argument('--tfbs1', type=int, required=True, help='number of TFBSs for gene 1')
-parser.add_argument('--tfbslen1', type=int, required=True, help='average length of TFBSs for gene 1')
-parser.add_argument('--cds1', type=int, required=True, help='length of CDS for gene 1 note: this number does NOT have to be divisible by 3')
-parser.add_argument('--tfbs2', type=int, required=True, help='number of TFBSs for gene 2')
-parser.add_argument('--tfbslen2', type=int, required=True, help='average length of TFBSs for gene 2')
-parser.add_argument('--cds2', type=int, required=True, help='length of CDS for gene 2 note: this number does NOT have to be divisible by 3')
+
+parser.add_argument('--tfbs1', type=int, default=None, help='number of TFBSs for gene 1')
+parser.add_argument('--tfbslen1', type=int, default=None, help='average length of TFBSs for gene 1')
+parser.add_argument('--cds1', type=int, default=None, help='length of CDS for gene 1 note: this number does NOT have to be divisible by 3')
+
+parser.add_argument('--tfbs2', type=int, default=None, help='number of TFBSs for gene 2')
+parser.add_argument('--tfbslen2', type=int, default=None, help='average length of TFBSs for gene 2')
+parser.add_argument('--cds2', type=int, default=None, help='length of CDS for gene 2 note: this number does NOT have to be divisible by 3')
+
 parser.add_argument('--mueffects', type=str, default="all", help='control parameter to control the effect of mutations, default is "all", change to "deleterious" for all mutations to be deleterious')
 parser.add_argument('--mutypes', type=str, default="all", help='control parameter to control if mutations land in TFBSs, CDS, or both, default is "all", change to "CDS" for all mutations to only be in CDS or "CRM" for mutations to only be in TFBSs')
 parser.add_argument('--outputdir', type=str, default="", help='path to the directory in which to save the output files, note: the directory sting must end in "/" and it can be a relative path if the output directory is a subdirectory to the one in which this script is saved.')
@@ -445,7 +450,7 @@ def sim_generations(population0, scores0, fitnesses0):
     var_w.append(variance(fitnesses0))
 
     #setting generation breaks for progress printing purposes
-    breaks = g // 10
+    breaks = g // 100
 
     #running for generations 1-g
     for gen in range(g):
@@ -459,9 +464,11 @@ def sim_generations(population0, scores0, fitnesses0):
         var_w.append(variance(w))
         generation.append(gen+1)
 
-        #printing progress
+        #writing to log file
         if gen % breaks == 0:
             print("Generation {}".format(str(gen)))
+            logfile.write("Gene {gn}: Generation {genn}\t{dt}\n".format(gn=genenumber, genn=gen, dt = datetime.now().strftime("%m/%d/%Y %H:%M:%S")))
+            logfile.flush()
 
     #computing average delta fitness
     avg_Dw += list(np.diff(np.array(avg_w)))
@@ -535,6 +542,10 @@ def run_simulator(num_of_tfbs, length_of_tfbs, length_of_cds):
     #computing scores and fitnesses for each individual
     fitnesses0, expression_scores0 = compute_indv_fitness(population0)
 
+    #write to log file
+    logfile.write("Gene {}: Burnin\t{dt}\n".format(genenumber, dt = datetime.now().strftime("%m/%d/%Y %H:%M:%S")))
+    logfile.flush()
+
     #bounding at zero
     w0 = bound_at_zero(fitnesses0)
 
@@ -554,7 +565,19 @@ def run_simulator(num_of_tfbs, length_of_tfbs, length_of_cds):
 
 
 #RUNNING THE PROGRAM
-genenumber = 1
-run_simulator(tfbs1, tfbs_len1, CDS_len1)
-genenumber = 2
-run_simulator(tfbs2, tfbs_len2, CDS_len2)
+if tfbs2 == None and tfbs_len2 == None and CDS_len2 == None and tfbs1 != None and tfbs_len1 != None and CDS_len1 != None:
+    genenumber = 1
+    run_simulator(tfbs1, tfbs_len1, CDS_len1)
+
+elif tfbs1 == None and tfbs_len1 == None and CDS_len1 == None and tfbs2 != None and tfbs_len2 != None and CDS_len2 != None:
+    genenumber = 2
+    run_simulator(tfbs2, tfbs_len2, CDS_len2)
+
+elif tfbs1 != None and tfbs_len1 != None and CDS_len1 != None and tfbs2 != None and tfbs_len2 != None and CDS_len2 != None:
+    genenumber = 1
+    run_simulator(tfbs1, tfbs_len1, CDS_len1)
+    genenumber = 2
+    run_simulator(tfbs2, tfbs_len2, CDS_len2)
+
+else:
+    print("tfbs, tfbs_len, and CDS_len parameters not set correctly!")

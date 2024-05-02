@@ -19,6 +19,9 @@ The script requires the following arguments:
 - `--tfbs1`, `--tfbslen1`, and `--cds1`: Integers specifying the number of TFBSs, the average length of TFBSs, and the length of the CDS for gene 1, respectively. Example: `--tfbs1 10 --tfbslen1 20 --cds1 2000`.
 - `--tfbs2`, `--tfbslen2`, and `--cds2`: Integers specifying the number of TFBSs, the average length of TFBSs, and the length of the CDS for gene 2, respectively. Example: `--tfbs2 20 --tfbslen2 30 --cds2 3000`.
 
+Note that starting in version 1.7, the tfbs, tfbslen, and cds arguments are now technically optional to allow for running the simulation for only one gene (either gene 1 or gene 2).  
+However, you must set either tfbs1, tfbslen1, and cds1; tfbs2, tfbslen2, and cds2; or all of them.  
+
 ### Optional Arguments
 
 The script also accepts the following optional arguments, which have default values:
