@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import os
 from multiprocessing import Pool
 
 #function
@@ -78,7 +79,7 @@ def find_coverage4each_tissue(df, tissue_ls, tissue_dict):
     num_genes_col = []
 
     #first row of resulting dataframe is the total
-    tissue_col.append("Total")
+    tissue_col.append("Expressed")
     total_len_col.append(total_cov)
     percent_cov_col.append(100)
     num_genes_col.append(len(df))
@@ -87,13 +88,12 @@ def find_coverage4each_tissue(df, tissue_ls, tissue_dict):
     #looping through tissues
     for tissue in tissue_ls:
         tissue_col.append(tissue)
-        print(tissue)
+
         #fitering, if main function is using a sub tissue list, tissue_dict will be set to None
         if tissue_dict == None:
             filtered_df = df[df['Tissue'].str.contains(tissue, regex=False)]
         else:
             filtered_df = df[df['Tissue'].str.contains("|".join(tissue_dict[tissue]), regex=True)]
-            print(filtered_df)
 
         #how many genes
         num_genes_col.append(len(filtered_df))
@@ -135,7 +135,7 @@ def main_func(data_csv, tissue_csv, database, sub=True, biotype="all"):
     if biotype == "protein_coding":
         data_df = data_df[data_df['BioType'] == "protein_coding"]
     elif biotype == "ncRNA":
-        data_df = data_df[data_df['BioType'] != "protein_coding"]
+        data_df = data_df[data_df['BioType'].str.contains('snoRNA|snRNA|scaRNA|scRNA|rRNA|misc_RNA|miRNA|lncRNA', regex=True)]
 
 
     #generating tissue dictionary
@@ -175,6 +175,7 @@ def main_func(data_csv, tissue_csv, database, sub=True, biotype="all"):
 
 
 #running
+"""
 main_func("_1_threshold_genome.csv", "tissue_categories/all_tissues.csv", "All", sub=False)
 main_func("_5_threshold_genome.csv", "tissue_categories/all_tissues.csv", "All", sub=False)
 main_func("_75.0th_threshold_genome.csv", "tissue_categories/all_tissues.csv", "All", sub=False)
@@ -188,7 +189,7 @@ main_func("GTEX_genes_5_threshold_genome.csv", "tissue_categories/GTEX_categorie
 main_func("GTEX_genes_75.0th_threshold_genome.csv", "tissue_categories/GTEX_categories.csv", "GTEX",  biotype="protein_coding")
 main_func("GTEX_genes_90.0th_threshold_genome.csv", "tissue_categories/GTEX_categories.csv", "GTEX",  biotype="protein_coding")
 main_func("GTEX_genes_99.0th_threshold_genome.csv", "tissue_categories/GTEX_categories.csv", "GTEX",  biotype="protein_coding")
-
+"""
 
 
 main_func("_1_threshold_genome.csv", "tissue_categories/all_tissues.csv", "All", sub=False, biotype="ncRNA")
@@ -198,9 +199,37 @@ main_func("_90.0th_threshold_genome.csv", "tissue_categories/all_tissues.csv", "
 main_func("_99.0th_threshold_genome.csv", "tissue_categories/all_tissues.csv", "All", sub=False,  biotype="ncRNA")
 
 
-
+"""
 main_func("Atlas_ncRNAs_1_threshold_genome.csv", "tissue_categories/Tissue_Atlas_categories.csv", "Tissue_Atlas")
 main_func("Atlas_ncRNAs_5_threshold_genome.csv", "tissue_categories/Tissue_Atlas_categories.csv", "Tissue_Atlas")
 main_func("Atlas_ncRNAs_75.0th_threshold_genome.csv", "tissue_categories/Tissue_Atlas_categories.csv", "Tissue_Atlas")
 main_func("Atlas_ncRNAs_90.0th_threshold_genome.csv", "tissue_categories/Tissue_Atlas_categories.csv", "Tissue_Atlas")
 main_func("Atlas_ncRNAs_99.0th_threshold_genome.csv", "tissue_categories/Tissue_Atlas_categories.csv", "Tissue_Atlas")
+
+
+
+
+main_func("GTEX_genes_1_threshold_CDS_genome.csv", "tissue_categories/GTEX_categories.csv", "GTEX", biotype="protein_coding")
+main_func("GTEX_genes_5_threshold_CDS_genome.csv", "tissue_categories/GTEX_categories.csv", "GTEX",  biotype="protein_coding")
+main_func("GTEX_genes_75.0th_threshold_CDS_genome.csv", "tissue_categories/GTEX_categories.csv", "GTEX",  biotype="protein_coding")
+main_func("GTEX_genes_90.0th_threshold_CDS_genome.csv", "tissue_categories/GTEX_categories.csv", "GTEX",  biotype="protein_coding")
+main_func("GTEX_genes_99.0th_threshold_CDS_genome.csv", "tissue_categories/GTEX_categories.csv", "GTEX",  biotype="protein_coding")
+
+"""
+
+
+"""
+directory = "/Users/philipbaldassari/Desktop/neuro/output"
+
+filels = []
+
+for file in os.listdir(directory):
+    if "RNA" in file and "Atlas" not in file and file.endswith(".csv"):
+        filels.append(file)
+        
+filels.sort()
+
+
+for i in filels:
+    main_func(i, "tissue_categories/all_tissues.csv", "All", sub=False, biotype="ncRNA")
+"""

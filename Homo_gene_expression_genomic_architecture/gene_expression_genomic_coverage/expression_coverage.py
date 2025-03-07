@@ -58,7 +58,7 @@ def extract_expression_data(expression_data, database, percentile, thresh):
         #filtering dataframe for Ensembl accessions (other accessions not compatible with the gtf file)
         express_df = express_df[express_df['acc'].str.contains("ENST")]
 
-        #Tissue Atlas reports all individuals in one csv, therefore this step takes the media expression level across samples
+        #Tissue Atlas reports all individuals in one csv, therefore this step takes the median expression level across samples
         express_df = express_df.groupby(['source', 'norm', 'organ', 'tissue', 'type', 'acc', 'species'])['expression'].median().reset_index()
 
         #filtering expression threshold
@@ -121,7 +121,7 @@ def extract_expression_data(expression_data, database, percentile, thresh):
 
 
 
-def gtf_query(gtf, accession_ls, tissue_dictionary, database, omic):
+def gtf_query(gtf, accession_ls, tissue_dictionary, database, omic, CDS_lengths=None):
     """
     Functions loops through genome annotation gtf and queries length for the input genes.
     gtf: (str) gtf file to search through
@@ -129,6 +129,7 @@ def gtf_query(gtf, accession_ls, tissue_dictionary, database, omic):
     tissue_dictionary (dict) maps genes to tissue they are expressed in
     database: 'GTEX' or 'Atlas' (this tells the function how to process the data)
     omic: (str) "genome" or "exome" (used to decide how to quesry the gtf)
+    CDS_lengths: (str) filename of csv file from Ensembl Biomart containing Ensembl gene ids and CDS lengths (cols: "Gene stable ID", "CDS Length")
     Returns: (DataFrame) with columns: Name, Start, Stop, Length, Type, and Tissue with rows for each gene/RNA queried
     """
 
@@ -153,6 +154,13 @@ def gtf_query(gtf, accession_ls, tissue_dictionary, database, omic):
         acc_query = "transcript_id"
     else:
         print("Database not supported.")
+
+    
+    #CDS length dictionary
+    if CDS_lengths != None:
+        CDS_df = pd.read_csv(CDS_lengths)
+        CDS_df = CDS_df.groupby('Gene stable ID')['CDS Length'].max().reset_index()
+        CDS_len_dict = dict(zip(CDS_df['Gene stable ID'], CDS_df['CDS Length']))
 
 
     #opening annotation gtf file
@@ -189,11 +197,23 @@ def gtf_query(gtf, accession_ls, tissue_dictionary, database, omic):
                 if accName in accession_ls and fields[2] == seqtype:
                     
                     #appending to lists
-                    gene_col.append(annotations["gene_id"])
-                    transcript_col.append(annotations["transcript_id"])
-                    start_col.append(int(fields[3]))
-                    stop_col.append(int(fields[4]))
-                    length_col.append(int(int(fields[4]) - int(fields[3])))
+                    if CDS_lengths == None:
+                        gene_col.append(annotations["gene_id"])
+                        transcript_col.append(annotations["transcript_id"])
+                        start_col.append(int(fields[3]))
+                        stop_col.append(int(fields[4]))
+                        length_col.append(int(int(fields[4]) - int(fields[3])))
+                    else:
+                        if annotations["gene_id"] in list(CDS_len_dict.keys()):
+                            gene_col.append(annotations["gene_id"])
+                            transcript_col.append(annotations["transcript_id"])
+                            start_col.append("")
+                            stop_col.append("")
+                            length_col.append(CDS_len_dict[annotations["gene_id"]])
+                        else:
+                            continue
+                    
+                    
                     type_col.append(annotations["gene_biotype"])
                     tissue_col.append(tissue_dictionary[accName])
 
@@ -206,7 +226,7 @@ def gtf_query(gtf, accession_ls, tissue_dictionary, database, omic):
 
 
 #main function
-def main_func(gtf_file, express_data, database, pct_threshhold, expression_threshold, omics_query):
+def main_func(gtf_file, express_data, database, pct_threshhold, expression_threshold, omics_query, CDS_length_data=None):
     """
     Function uses the extract_expression_data() and gtf_query() function to extract a list of accessions of interest and query the gtf annotation to extract position, length, biotype, and tissue data.
     gtf_file: (str) gtf filename
@@ -222,7 +242,10 @@ def main_func(gtf_file, express_data, database, pct_threshhold, expression_thres
     ls_of_accession, dict_of_tissues, name_for_file = extract_expression_data(express_data, database, pct_threshhold, expression_threshold)
 
     #creating df
-    df = gtf_query(gtf_file, ls_of_accession, dict_of_tissues, database, omics_query)
+    if CDS_length_data == None:
+        df = gtf_query(gtf_file, ls_of_accession, dict_of_tissues, database, omics_query)
+    else:
+        df = gtf_query(gtf_file, ls_of_accession, dict_of_tissues, database, omics_query, CDS_lengths=CDS_length_data)
 
     filename = "output/" + name_for_file + "_" + omics_query + ".csv"
 
@@ -233,13 +256,23 @@ def main_func(gtf_file, express_data, database, pct_threshhold, expression_thres
 
 
 """
-os.chdir('../')
-main_func("Homo_sapiens.GRCh38.110.gtf", "datasets/GTEx_Analysis_2017-06-05_v8_RNASeQCv1.1.9_gene_median_tpm.gct", "GTEX", 0.99, None, "genome")
+main_func("Homo_sapiens.GRCh38.110.gtf", "datasets/GTEx_Analysis_2017-06-05_v8_RNASeQCv1.1.9_gene_median_tpm.gct", "GTEX", None, 1, "genome", CDS_length_data="CDS_lengths.csv")
+main_func("Homo_sapiens.GRCh38.110.gtf", "datasets/GTEx_Analysis_2017-06-05_v8_RNASeQCv1.1.9_gene_median_tpm.gct", "GTEX", None, 5, "genome", CDS_length_data="CDS_lengths.csv")
+main_func("Homo_sapiens.GRCh38.110.gtf", "datasets/GTEx_Analysis_2017-06-05_v8_RNASeQCv1.1.9_gene_median_tpm.gct", "GTEX", 0.75, None, "genome", CDS_length_data="CDS_lengths.csv")
+main_func("Homo_sapiens.GRCh38.110.gtf", "datasets/GTEx_Analysis_2017-06-05_v8_RNASeQCv1.1.9_gene_median_tpm.gct", "GTEX", 0.90, None, "genome", CDS_length_data="CDS_lengths.csv")
+main_func("Homo_sapiens.GRCh38.110.gtf", "datasets/GTEx_Analysis_2017-06-05_v8_RNASeQCv1.1.9_gene_median_tpm.gct", "GTEX", 0.99, None, "genome", CDS_length_data="CDS_lengths.csv")
 """
 
+main_func("Homo_sapiens.GRCh38.110.gtf", "datasets/GTEx_Analysis_2017-06-05_v8_RNASeQCv1.1.9_gene_median_tpm.gct", "GTEX", None, 1, "genome")
+main_func("Homo_sapiens.GRCh38.110.gtf", "datasets/GTEx_Analysis_2017-06-05_v8_RNASeQCv1.1.9_gene_median_tpm.gct", "GTEX", None, 5, "genome")
+main_func("Homo_sapiens.GRCh38.110.gtf", "datasets/GTEx_Analysis_2017-06-05_v8_RNASeQCv1.1.9_gene_median_tpm.gct", "GTEX", 0.75, None, "genome")
+main_func("Homo_sapiens.GRCh38.110.gtf", "datasets/GTEx_Analysis_2017-06-05_v8_RNASeQCv1.1.9_gene_median_tpm.gct", "GTEX", 0.90, None, "genome")
+main_func("Homo_sapiens.GRCh38.110.gtf", "datasets/GTEx_Analysis_2017-06-05_v8_RNASeQCv1.1.9_gene_median_tpm.gct", "GTEX", 0.99, None, "genome")
 
 
 
+
+"""
 #runing in parallel
 def run_parallel(args_list):
     with multiprocessing.Pool(processes=10) as pool:
@@ -257,4 +290,4 @@ if __name__ == "__main__":
 
     #running
     run_parallel(arguments_list)
-
+"""
