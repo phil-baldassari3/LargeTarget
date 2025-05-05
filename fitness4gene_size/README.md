@@ -2,6 +2,14 @@
 
 This program simulates the evolution of gene expression and fitness in a Wright-Fisher model using a diploid population of obligate outbreeding hermaphrodites. The goal of the simulation is to compare two differently sized genes, with one gene having a longer coding sequence (CDS) and more transcription factor binding sites (TFBS) than the other. The simulation parameters are set through command-line arguments.
 
+### Installation
+
+Clone this repository, navigate to the directory, and create a conda environment for the tool as follows:
+
+```
+conda env create -f FITNESS_SIM.yml
+```
+
 ### Usage
 
 Run the script through a terminal using a command such as the following:
